@@ -40,8 +40,12 @@ async function main() {
       required: true
     };
 
-    const answers = await inquirerer.prompt({}, [question]) as { template: string };
-    // inquirerer.close();
+    let answers: { template: string };
+    try {
+      answers = await inquirerer.prompt({}, [question]) as { template: string };
+    } finally {
+      inquirerer.close();
+    }
 
     const selectedFolder = answers.template;
     console.log(`\nYou selected: ${selectedFolder}\n`);

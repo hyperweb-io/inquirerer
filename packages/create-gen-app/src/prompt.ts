@@ -66,8 +66,11 @@ export async function promptUser(
   const prompter = new Inquirerer({
     noTty
   });
-  
-  const answers = await prompter.prompt(argv, questions);
-  
-  return answers;
+
+  try {
+    const answers = await prompter.prompt(argv, questions);
+    return answers;
+  } finally {
+    prompter.close();
+  }
 }
