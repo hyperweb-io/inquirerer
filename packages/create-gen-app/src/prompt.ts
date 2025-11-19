@@ -71,6 +71,8 @@ export async function promptUser(
     const answers = await prompter.prompt(argv, questions);
     return answers;
   } finally {
-    prompter.close();
+    if (typeof (prompter as any).close === 'function') {
+      (prompter as any).close();
+    }
   }
 }
