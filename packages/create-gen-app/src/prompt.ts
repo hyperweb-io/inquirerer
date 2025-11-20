@@ -13,8 +13,10 @@ export function generateQuestions(extractedVariables: ExtractedVariables): Quest
   
   if (extractedVariables.projectQuestions) {
     for (const question of extractedVariables.projectQuestions.questions) {
+      const normalizedName = normalizeQuestionName(question.name);
+      question.name = normalizedName;
       questions.push(question);
-      askedVariables.add(question.name);
+      askedVariables.add(normalizedName);
     }
   }
   
@@ -43,6 +45,13 @@ export function generateQuestions(extractedVariables: ExtractedVariables): Quest
   }
   
   return questions;
+}
+
+function normalizeQuestionName(name: string): string {
+  if (/^__.+__$/.test(name)) {
+    return name.slice(2, -2);
+  }
+  return name;
 }
 
 /**
