@@ -3,18 +3,24 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+export interface CloneOptions {
+  branch?: string;
+}
+
 /**
  * Clone a repository to a temporary directory
  * @param url - Repository URL (GitHub or any git URL)
  * @returns Path to the cloned repository
  */
-export async function cloneRepo(url: string): Promise<string> {
+export async function cloneRepo(url: string, options: CloneOptions = {}): Promise<string> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'create-gen-'));
+  const { branch } = options;
   
   try {
     const gitUrl = normalizeGitUrl(url);
+    const branchArgs = branch ? ` --branch ${branch} --single-branch` : '';
     
-    execSync(`git clone ${gitUrl} ${tempDir}`, {
+    execSync(`git clone${branchArgs} ${gitUrl} ${tempDir}`, {
       stdio: 'inherit'
     });
     

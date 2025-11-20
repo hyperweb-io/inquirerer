@@ -1,10 +1,18 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
+import { cloneRepo } from '../src/clone';
 import { extractVariables } from '../src/extract';
 import { promptUser } from '../src/prompt';
 import { ExtractedVariables } from '../src/types';
+
+jest.mock('child_process', () => {
+  return {
+    execSync: jest.fn()
+  };
+});
 
 jest.mock('inquirerer', () => {
   return {
@@ -347,6 +355,32 @@ module.exports = {
 
       const content = fs.readFileSync(path.join(testOutputDir, 'test.txt'), 'utf8');
       expect(content).toBe('Alice loves Alice and Alice is great!');
+    });
+  });
+
+  describe('cloneRepo', () => {
+    const execSyncMock = execSync as jest.MockedFunction<typeof execSync>;
+
+    beforeEach(() => {
+      execSyncMock.mockReset();
+      execSyncMock.mockImplementation(() => undefined);
+    });
+
+    it('clones default branch when no branch provided', async () => {
+      const tempDir = await cloneRepo('https://github.com/example/repo.git');
+      const command = execSyncMock.mock.calls[0][0] as string;
+      expect(command).toContain('git clone https://github.com/example/repo.git');
+      expect(command.trim().endsWith(tempDir)).toBe(true);
+      expect(fs.existsSync(tempDir)).toBe(true);
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it('clones a specific branch when provided', async () => {
+      const tempDir = await cloneRepo('https://github.com/example/repo.git', { branch: 'dev' });
+      const command = execSyncMock.mock.calls[0][0] as string;
+      expect(command).toContain('git clone --branch dev --single-branch https://github.com/example/repo.git');
+      expect(command.trim().endsWith(tempDir)).toBe(true);
+      fs.rmSync(tempDir, { recursive: true, force: true });
     });
   });
 });

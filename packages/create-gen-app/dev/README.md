@@ -7,19 +7,26 @@ This script helps you test `create-gen-app` locally with the pgpm-boilerplates r
 From the `packages/create-gen-app` directory, run:
 
 ```bash
-yarn dev
+yarn dev [--repo url] [--branch name] [--path dir] [--template name] [--output dir]
 ```
 
-or
+Examples:
 
 ```bash
-npm run dev
+# Use the default repo and pick a template interactively
+yarn dev
+
+# Pin to a custom branch and template folder
+yarn dev --branch feature/new-template --template module
+
+# Change the output directory
+yarn dev --output ./my-generated-template
 ```
 
 ## What it does
 
-1. **Clones the default repository**: `https://github.com/launchql/pgpm-boilerplates/`
-2. **Lists available templates**: Scans the root directory (`.`) for folders (e.g., `module`, `workspace`)
+1. **Clones the default repository**: `https://github.com/launchql/pgpm-boilerplates/` (override via `--repo`, select branch via `--branch`)
+2. **Lists available templates**: looks for subdirectories inside `--path` (default `.`; typically `module`, `workspace`)
 3. **Prompts for selection**: Uses `inquirerer` to display an interactive list of templates
 4. **Processes the template**:
    - Extracts variables from the selected folder
@@ -30,11 +37,13 @@ npm run dev
 
 ## Configuration
 
-You can modify these constants in `dev/index.ts`:
+Command-line flags override the defaults below (see `dev/index.ts`):
 
-- `DEFAULT_REPO`: The repository URL to clone (default: `https://github.com/launchql/pgpm-boilerplates/`)
-- `DEFAULT_DIRECTORY`: The directory within the repo to scan for templates (default: `.`)
-- `OUTPUT_DIR`: Where to generate the output (default: `./test-output`)
+- `--repo` (`-r`): repository URL to clone (default: `https://github.com/launchql/pgpm-boilerplates/`)
+- `--branch` (`-b`): branch or tag to checkout
+- `--path` (`-p`): directory within the repo to scan for templates (default: `.`)
+- `--template` (`-t`): template folder to use (e.g., `module`, `workspace`); if omitted, an interactive list appears
+- `--output` (`-o`): output directory for generated project (default: `./test-output`)
 
 ## Example
 

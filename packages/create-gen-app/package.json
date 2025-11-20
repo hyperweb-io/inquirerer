@@ -29,7 +29,11 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
-    "inquirerer": "^2.1.0"
+    "inquirerer": "^2.1.0",
+    "minimist": "^1.2.8"
+  },
+  "devDependencies": {
+    "@types/minimist": "^1.2.5"
   },
   "keywords": []
 }

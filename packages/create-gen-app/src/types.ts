@@ -35,6 +35,16 @@ export interface CreateGenOptions {
   templateUrl: string;
   
   /**
+   * Optional branch or tag to checkout after cloning
+   */
+  fromBranch?: string;
+
+  /**
+   * Path inside the repository to use as the template root
+   */
+  fromPath?: string;
+
+  /**
    * Destination directory for the generated project
    */
   outputDir: string;
