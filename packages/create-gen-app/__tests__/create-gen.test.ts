@@ -176,7 +176,7 @@ module.exports = {
     it("should handle variables with different casings", async () => {
       fs.writeFileSync(
         path.join(testTempDir, "test.txt"),
-        "__lowercase__ ____UPPERCASE____ ____CamelCase____ __snake_case__"
+        "____lowercase____ ____UPPERCASE____ ____CamelCase____ ____snake_case____"
       );
 
       const result = await extractVariables(testTempDir);
