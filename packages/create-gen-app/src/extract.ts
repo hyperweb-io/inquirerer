@@ -8,10 +8,15 @@ import {
   Questions,
 } from "./types";
 
+const PLACEHOLDER_BOUNDARY = "____";
+
 /**
- * Pattern to match __VARIABLE__ in filenames and content
+ * Pattern to match ____VARIABLE____ in filenames and content
  */
-const VARIABLE_PATTERN = /__([A-Za-z_][A-Za-z0-9_]*)__/g;
+const VARIABLE_PATTERN = new RegExp(
+  `${PLACEHOLDER_BOUNDARY}([A-Za-z_][A-Za-z0-9_]*)${PLACEHOLDER_BOUNDARY}`,
+  "g"
+);
 
 /**
  * Extract all variables from a template directory
@@ -27,11 +32,12 @@ export async function extractVariables(
   const contentReplacerVars = new Set<string>();
 
   const projectQuestions = await loadProjectQuestions(templateDir);
-  const ignoredPatterns = new Set<string>(projectQuestions?.ignore ?? []);
+  const ignoredPathPatterns = new Set<string>(projectQuestions?.ignore ?? []);
+  const ignoredContentTokens = buildIgnoredContentTokens(projectQuestions);
 
   await walkDirectory(templateDir, async (filePath) => {
     const relativePath = path.relative(templateDir, filePath);
-    if (shouldIgnore(relativePath, ignoredPatterns)) {
+    if (shouldIgnore(relativePath, ignoredPathPatterns)) {
       return;
     }
 
@@ -49,18 +55,27 @@ export async function extractVariables(
         fileReplacerVars.add(varName);
         fileReplacers.push({
           variable: varName,
-          pattern: new RegExp(`__${varName}__`, "g"),
+          pattern: new RegExp(
+            `${PLACEHOLDER_BOUNDARY}${varName}${PLACEHOLDER_BOUNDARY}`,
+            "g"
+          ),
         });
       }
     }
 
-    const contentVars = await extractFromFileContent(filePath, ignoredPatterns);
+    const contentVars = await extractFromFileContent(
+      filePath,
+      ignoredContentTokens
+    );
     for (const varName of contentVars) {
       if (!contentReplacerVars.has(varName)) {
         contentReplacerVars.add(varName);
         contentReplacers.push({
           variable: varName,
-          pattern: new RegExp(`__${varName}__`, "g"),
+          pattern: new RegExp(
+            `${PLACEHOLDER_BOUNDARY}${varName}${PLACEHOLDER_BOUNDARY}`,
+            "g"
+          ),
         });
       }
     }
@@ -80,7 +95,7 @@ export async function extractVariables(
  */
 async function extractFromFileContent(
   filePath: string,
-  ignoredPatterns: Set<string>
+  ignoredTokens: Set<string>
 ): Promise<Set<string>> {
   const variables = new Set<string>();
 
@@ -97,7 +112,7 @@ async function extractFromFileContent(
       for (const line of lines) {
         const matches = line.matchAll(VARIABLE_PATTERN);
         for (const match of matches) {
-          if (!shouldIgnoreContent(match[0], ignoredPatterns)) {
+          if (!shouldIgnoreContent(match[0], ignoredTokens)) {
             variables.add(match[1]);
           }
         }
@@ -107,7 +122,7 @@ async function extractFromFileContent(
     stream.on("end", () => {
       const matches = buffer.matchAll(VARIABLE_PATTERN);
       for (const match of matches) {
-        if (!shouldIgnoreContent(match[0], ignoredPatterns)) {
+        if (!shouldIgnoreContent(match[0], ignoredTokens)) {
           variables.add(match[1]);
         }
       }
@@ -226,22 +241,49 @@ function shouldIgnore(
   return false;
 }
 
-const DEFAULT_IGNORED_CONTENT = new Set(["__tests__", "__snapshots__"]);
+const DEFAULT_IGNORED_CONTENT_TOKENS = ["tests", "snapshots"];
 
 function shouldIgnoreContent(
   match: string,
-  ignoredPatterns: Set<string>
+  ignoredTokens: Set<string>
 ): boolean {
-  if (ignoredPatterns.size === 0 && DEFAULT_IGNORED_CONTENT.size === 0) {
+  if (ignoredTokens.size === 0) {
     return false;
   }
-  const normalizedMatch = match.slice(2, -2);
-  return (
-    ignoredPatterns.has(match) ||
-    ignoredPatterns.has(normalizedMatch) ||
-    DEFAULT_IGNORED_CONTENT.has(match) ||
-    DEFAULT_IGNORED_CONTENT.has(normalizedMatch)
+  const token = match.slice(
+    PLACEHOLDER_BOUNDARY.length,
+    -PLACEHOLDER_BOUNDARY.length
   );
+  return ignoredTokens.has(token);
+}
+
+function buildIgnoredContentTokens(projectQuestions: Questions | null): Set<string> {
+  const tokens = new Set<string>(DEFAULT_IGNORED_CONTENT_TOKENS);
+  if (projectQuestions?.ignore) {
+    for (const entry of projectQuestions.ignore) {
+      const normalized = normalizePlaceholder(entry);
+      if (normalized) {
+        tokens.add(normalized);
+      }
+    }
+  }
+  return tokens;
+}
+
+function normalizePlaceholder(entry: string): string | null {
+  if (
+    entry.startsWith(PLACEHOLDER_BOUNDARY) &&
+    entry.endsWith(PLACEHOLDER_BOUNDARY)
+  ) {
+    return entry.slice(
+      PLACEHOLDER_BOUNDARY.length,
+      -PLACEHOLDER_BOUNDARY.length
+    );
+  }
+  if (entry.startsWith("__") && entry.endsWith("__")) {
+    return entry.slice(2, -2);
+  }
+  return entry || null;
 }
 
 /**

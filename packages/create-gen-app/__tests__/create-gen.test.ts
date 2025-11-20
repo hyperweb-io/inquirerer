@@ -45,10 +45,10 @@ describe("create-gen-app", () => {
   describe("extractVariables", () => {
     it("should extract variables from filenames", async () => {
       fs.writeFileSync(
-        path.join(testTempDir, "__PROJECT_NAME__.txt"),
+        path.join(testTempDir, "____PROJECT_NAME____.txt"),
         "content"
       );
-      fs.writeFileSync(path.join(testTempDir, "__AUTHOR__.md"), "content");
+      fs.writeFileSync(path.join(testTempDir, "____AUTHOR____.md"), "content");
 
       const result = await extractVariables(testTempDir);
 
@@ -62,7 +62,7 @@ describe("create-gen-app", () => {
     it("should extract variables from file contents", async () => {
       fs.writeFileSync(
         path.join(testTempDir, "test.txt"),
-        "Hello __USER_NAME__, welcome to __PROJECT_NAME__!"
+        "Hello ____USER_NAME____, welcome to ____PROJECT_NAME____!"
       );
 
       const result = await extractVariables(testTempDir);
@@ -77,11 +77,11 @@ describe("create-gen-app", () => {
     });
 
     it("should extract variables from nested directories", async () => {
-      const nestedDir = path.join(testTempDir, "src", "__MODULE_NAME__");
+      const nestedDir = path.join(testTempDir, "src", "____MODULE_NAME____");
       fs.mkdirSync(nestedDir, { recursive: true });
       fs.writeFileSync(
-        path.join(nestedDir, "__FILE_NAME__.ts"),
-        'export const __CONSTANT__ = "value";'
+        path.join(nestedDir, "____FILE_NAME____.ts"),
+        'export const ____CONSTANT____ = "value";'
       );
 
       const result = await extractVariables(testTempDir);
@@ -163,7 +163,7 @@ module.exports = {
     it("should skip .questions.json and .questions.js from variable extraction", async () => {
       fs.writeFileSync(
         path.join(testTempDir, ".questions.json"),
-        '{"questions": [{"name": "__SHOULD_NOT_EXTRACT__"}]}'
+        '{"questions": [{"name": "____SHOULD_NOT_EXTRACT____"}]}'
       );
 
       const result = await extractVariables(testTempDir);
@@ -176,7 +176,7 @@ module.exports = {
     it("should handle variables with different casings", async () => {
       fs.writeFileSync(
         path.join(testTempDir, "test.txt"),
-        "__lowercase__ __UPPERCASE__ __CamelCase__ __snake_case__"
+        "__lowercase__ ____UPPERCASE____ ____CamelCase____ __snake_case__"
       );
 
       const result = await extractVariables(testTempDir);
@@ -210,9 +210,9 @@ module.exports = {
 
       const extractedVariables: ExtractedVariables = {
         fileReplacers: [
-          { variable: "PROJECT_NAME", pattern: /__PROJECT_NAME__/g },
+          { variable: "PROJECT_NAME", pattern: /____PROJECT_NAME____/g },
         ],
-        contentReplacers: [{ variable: "AUTHOR", pattern: /__AUTHOR__/g }],
+        contentReplacers: [{ variable: "AUTHOR", pattern: /____AUTHOR____/g }],
         projectQuestions: null,
       };
 
@@ -272,7 +272,7 @@ module.exports = {
 
       const extractedVariables: ExtractedVariables = {
         fileReplacers: [
-          { variable: "PROJECT_NAME", pattern: /__PROJECT_NAME__/g },
+          { variable: "PROJECT_NAME", pattern: /____PROJECT_NAME____/g },
         ],
         contentReplacers: [],
         projectQuestions: null,
@@ -289,7 +289,7 @@ module.exports = {
     it("should replace variables in file contents", async () => {
       fs.writeFileSync(
         path.join(testTempDir, "README.md"),
-        "# __PROJECT_NAME__\n\nBy __AUTHOR__"
+        "# ____PROJECT_NAME____\n\nBy ____AUTHOR____"
       );
 
       const extractedVariables = await extractVariables(testTempDir);
@@ -315,7 +315,7 @@ module.exports = {
 
     it("should replace variables in filenames", async () => {
       fs.writeFileSync(
-        path.join(testTempDir, "__PROJECT_NAME__.config.js"),
+        path.join(testTempDir, "____PROJECT_NAME____.config.js"),
         "module.exports = {};"
       );
 
@@ -338,11 +338,11 @@ module.exports = {
     });
 
     it("should replace variables in nested directory names", async () => {
-      const nestedDir = path.join(testTempDir, "src", "__MODULE_NAME__");
+      const nestedDir = path.join(testTempDir, "src", "____MODULE_NAME____");
       fs.mkdirSync(nestedDir, { recursive: true });
       fs.writeFileSync(
         path.join(nestedDir, "index.ts"),
-        'export const name = "__MODULE_NAME__";'
+        'export const name = "____MODULE_NAME____";'
       );
 
       const extractedVariables = await extractVariables(testTempDir);
@@ -389,7 +389,7 @@ module.exports = {
     it("should handle multiple occurrences of the same variable", async () => {
       fs.writeFileSync(
         path.join(testTempDir, "test.txt"),
-        "__NAME__ loves __NAME__ and __NAME__ is great!"
+        "____NAME____ loves ____NAME____ and ____NAME____ is great!"
       );
 
       const extractedVariables = await extractVariables(testTempDir);
@@ -450,7 +450,7 @@ module.exports = {
     fs.mkdirSync(ignoredDir);
     fs.writeFileSync(
       path.join(ignoredDir, "example.txt"),
-      "This file has __IGNORED__ variable"
+      "This file has ____IGNORED____ variable"
     );
     fs.writeFileSync(
       path.join(testTempDir, ".questions.json"),

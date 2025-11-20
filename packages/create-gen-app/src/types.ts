@@ -11,7 +11,7 @@ export interface Questions {
 }
 
 /**
- * Variable extracted from filename patterns like __VARIABLE__
+ * Variable extracted from filename patterns like ____VARIABLE____
  */
 export interface FileReplacer {
   variable: string;
@@ -19,7 +19,7 @@ export interface FileReplacer {
 }
 
 /**
- * Variable extracted from file content patterns like __VARIABLE__
+ * Variable extracted from file content patterns like ____VARIABLE____
  */
 export interface ContentReplacer {
   variable: string;

@@ -1,13 +1,17 @@
-import { Inquirerer, Question } from 'inquirerer';
+import { Inquirerer, Question } from "inquirerer";
 
-import { ExtractedVariables } from './types';
+import { ExtractedVariables } from "./types";
+
+const PLACEHOLDER_BOUNDARY = "____";
 
 /**
  * Generate questions from extracted variables
  * @param extractedVariables - Variables extracted from the template
  * @returns Array of questions to prompt the user
  */
-export function generateQuestions(extractedVariables: ExtractedVariables): Question[] {
+export function generateQuestions(
+  extractedVariables: ExtractedVariables
+): Question[] {
   const questions: Question[] = [];
   const askedVariables = new Set<string>();
   
@@ -48,7 +52,16 @@ export function generateQuestions(extractedVariables: ExtractedVariables): Quest
 }
 
 function normalizeQuestionName(name: string): string {
-  if (/^__.+__$/.test(name)) {
+  if (
+    name.startsWith(PLACEHOLDER_BOUNDARY) &&
+    name.endsWith(PLACEHOLDER_BOUNDARY)
+  ) {
+    return name.slice(
+      PLACEHOLDER_BOUNDARY.length,
+      -PLACEHOLDER_BOUNDARY.length
+    );
+  }
+  if (name.startsWith("__") && name.endsWith("__")) {
     return name.slice(2, -2);
   }
   return name;

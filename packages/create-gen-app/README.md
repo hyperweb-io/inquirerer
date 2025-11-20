@@ -19,7 +19,7 @@ A TypeScript library for cloning and customizing template repositories with vari
 ## Features
 
 - Clone GitHub repositories or any git URL
-- Extract template variables from filenames and file contents using `__VARIABLE__` syntax
+- Extract template variables from filenames and file contents using `____VARIABLE____` syntax
 - Load custom questions from `.questions.json` or `.questions.js` files
 - Interactive prompts using inquirerer with CLI argument support
 - Stream-based file processing for efficient variable replacement
@@ -49,19 +49,19 @@ await createGen({
 
 ### Template Variables
 
-Variables in your template should be wrapped in double underscores:
+Variables in your template should be wrapped in `____` (four underscores) on both sides:
 
 **Filename variables:**
 ```
-__PROJECT_NAME__/
-  __MODULE_NAME__.ts
+____PROJECT_NAME____/
+  ____MODULE_NAME____.ts
 ```
 
 **Content variables:**
 ```typescript
-// __MODULE_NAME__.ts
-export const projectName = "__PROJECT_NAME__";
-export const author = "__AUTHOR__";
+// ____MODULE_NAME____.ts
+export const projectName = "____PROJECT_NAME____";
+export const author = "____AUTHOR____";
 ```
 
 ### Custom Questions
