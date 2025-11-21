@@ -52,6 +52,13 @@ describe("CLI integration (GitHub templates)", () => {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
       expect(pkg.name).toBe(answers.PACKAGE_IDENTIFIER);
       expect(pkg.license).toBe(answers.LICENSE);
+
+      const licenseContent = fs.readFileSync(
+        path.join(workspace.outputDir, "LICENSE"),
+        "utf8"
+      );
+      expect(licenseContent).toContain("MIT License");
+      expect(licenseContent).toContain(answers.USERFULLNAME);
     } finally {
       cleanupWorkspace(workspace);
     }

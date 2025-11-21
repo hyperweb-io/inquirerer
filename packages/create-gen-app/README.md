@@ -23,6 +23,7 @@ A TypeScript library for cloning and customizing template repositories with vari
 - Load custom questions from `.questions.json` or `.questions.js` files
 - Interactive prompts using inquirerer with CLI argument support
 - Stream-based file processing for efficient variable replacement
+- Auto-generate `LICENSE` file content (MIT, Apache-2.0, ISC) based on user answers
 
 ## Installation
 

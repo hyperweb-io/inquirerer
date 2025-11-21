@@ -43,6 +43,12 @@ describe("createGen integration (GitHub templates)", () => {
         ".questions.json"
       );
       expect(fs.existsSync(questionsJsonPath)).toBe(false);
+
+      const licensePath = path.join(workspace.outputDir, "LICENSE");
+      expect(fs.existsSync(licensePath)).toBe(true);
+      const licenseContent = fs.readFileSync(licensePath, "utf8");
+      expect(licenseContent).toContain(answers.USERFULLNAME);
+      expect(licenseContent).toContain("MIT License");
     } finally {
       cleanupWorkspace(workspace);
     }

@@ -25,7 +25,10 @@ export function cleanupWorkspace(workspace: TempWorkspace): void {
   fs.rmSync(workspace.baseDir, { recursive: true, force: true });
 }
 
-export function buildAnswers(suffix: string): Record<string, string> {
+export function buildAnswers(
+  suffix: string,
+  overrides: Partial<Record<string, string>> = {}
+): Record<string, string> {
   const safeSuffix = suffix.replace(/[^a-z0-9]/gi, "-").toLowerCase();
   return {
     USERFULLNAME: `Test User ${suffix}`,
@@ -37,6 +40,7 @@ export function buildAnswers(suffix: string): Record<string, string> {
     ACCESS: "public",
     LICENSE: "MIT",
     PACKAGE_IDENTIFIER: `integration-${safeSuffix}`,
+    ...overrides,
   };
 }
 
