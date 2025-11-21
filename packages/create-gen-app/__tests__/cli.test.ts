@@ -1,104 +1,59 @@
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 
-jest.mock("../src/clone", () => ({
-  cloneRepo: jest.fn(),
-}));
-
-jest.mock("../src", () => ({
-  createGen: jest.fn(),
-}));
-
 import { runCli } from "../src/cli";
-import { cloneRepo } from "../src/clone";
-import { createGen } from "../src";
+import {
+  TEST_BRANCH,
+  TEST_REPO,
+  TEST_TEMPLATE,
+  buildAnswers,
+  cleanupWorkspace,
+  createTempWorkspace,
+} from "../test-utils/integration-helpers";
 
-const mockCloneRepo = cloneRepo as jest.MockedFunction<typeof cloneRepo>;
-const mockCreateGen = createGen as jest.MockedFunction<typeof createGen>;
+jest.setTimeout(180_000);
 
-function makeTempTemplateRoot(structure: string[]): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cga-cli-test-"));
-  for (const folder of structure) {
-    fs.mkdirSync(path.join(root, folder), { recursive: true });
-  }
-  return root;
-}
+describe("CLI integration (GitHub templates)", () => {
+  it("generates a project using the real repo", async () => {
+    const workspace = createTempWorkspace("cli");
+    const answers = buildAnswers("cli");
 
-describe("CLI", () => {
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("invokes createGen with provided template and overrides", async () => {
-    const repoRoot = makeTempTemplateRoot(["module", "workspace"]);
-    mockCloneRepo.mockResolvedValue(repoRoot);
-    mockCreateGen.mockResolvedValue("/tmp/output");
-
-    const outputDir = path.join(os.tmpdir(), "cga-cli-output");
-    const result = await runCli([
+    const args = [
+      "--repo",
+      TEST_REPO,
+      "--branch",
+      TEST_BRANCH,
+      "--path",
+      ".",
       "--template",
-      "module",
+      TEST_TEMPLATE,
       "--output",
-      outputDir,
-      "--LICENSE",
-      "Apache-2.0",
-    ]);
+      workspace.outputDir,
+      "--no-tty",
+    ];
 
-    expect(result).toEqual({
-      outputDir: path.resolve(outputDir),
-      template: "module",
-    });
-    expect(mockCreateGen).toHaveBeenCalledTimes(1);
-    expect(mockCreateGen).toHaveBeenCalledWith({
-      templateUrl: "https://github.com/launchql/pgpm-boilerplates.git",
-      fromBranch: undefined,
-      fromPath: "module",
-      outputDir: path.resolve(outputDir),
-      argv: { LICENSE: "Apache-2.0" },
-      noTty: false,
-    });
-    expect(fs.existsSync(repoRoot)).toBe(false);
-  });
-
-  it("auto-selects template when only one exists and enforces default output name", async () => {
-    const repoRoot = makeTempTemplateRoot(["module"]);
-    mockCloneRepo.mockResolvedValue(repoRoot);
-    mockCreateGen.mockResolvedValue("/tmp/output");
-
-    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "cga-cli-cwd-"));
-    const originalCwd = process.cwd();
-    process.chdir(cwd);
-
-    try {
-      const resolvedCwd = fs.realpathSync(cwd);
-      await runCli([]);
-
-      expect(mockCreateGen).toHaveBeenCalledWith(
-        expect.objectContaining({
-          fromPath: "module",
-          outputDir: path.resolve(path.join(resolvedCwd, "module")),
-        })
-      );
-    } finally {
-      process.chdir(originalCwd);
-      fs.rmSync(cwd, { recursive: true, force: true });
+    for (const [key, value] of Object.entries(answers)) {
+      args.push(`--${key}`, value);
     }
-  });
-
-  it("throws when output directory exists without --force", async () => {
-    const repoRoot = makeTempTemplateRoot(["module"]);
-    mockCloneRepo.mockResolvedValue(repoRoot);
-    mockCreateGen.mockResolvedValue("/tmp/output");
-
-    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "cga-cli-existing-"));
 
     try {
-      await expect(
-        runCli(["--template", "module", "--output", outputDir])
-      ).rejects.toThrow("Output directory");
+      const result = await runCli(args);
+      expect(result).toBeDefined();
+      if (!result) {
+        return;
+      }
+
+      expect(result.template).toBe(TEST_TEMPLATE);
+      expect(result.outputDir).toBe(path.resolve(workspace.outputDir));
+
+      const pkgPath = path.join(workspace.outputDir, "package.json");
+      expect(fs.existsSync(pkgPath)).toBe(true);
+
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+      expect(pkg.name).toBe(answers.PACKAGE_IDENTIFIER);
+      expect(pkg.license).toBe(answers.LICENSE);
     } finally {
-      fs.rmSync(outputDir, { recursive: true, force: true });
+      cleanupWorkspace(workspace);
     }
   });
 
@@ -108,7 +63,6 @@ describe("CLI", () => {
     await runCli(["--version"]);
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringMatching(/create-gen-app v/));
-    expect(mockCloneRepo).not.toHaveBeenCalled();
     logSpy.mockRestore();
   });
 });

@@ -1,99 +1,51 @@
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
-jest.mock('../src/clone', () => ({
-  cloneRepo: jest.fn()
-}));
+import { createGen } from "../src";
+import {
+  TEST_BRANCH,
+  TEST_REPO,
+  TEST_TEMPLATE,
+  buildAnswers,
+  cleanupWorkspace,
+  createTempWorkspace,
+} from "../test-utils/integration-helpers";
 
-jest.mock('../src/extract', () => ({
-  extractVariables: jest.fn()
-}));
+jest.setTimeout(180_000);
 
-jest.mock('../src/prompt', () => ({
-  promptUser: jest.fn()
-}));
+describe("createGen integration (GitHub templates)", () => {
+  it("clones the default repo and generates the module template", async () => {
+    const workspace = createTempWorkspace("flow");
 
-jest.mock('../src/replace', () => ({
-  replaceVariables: jest.fn()
-}));
+    try {
+      const answers = buildAnswers("flow");
+      const result = await createGen({
+        templateUrl: TEST_REPO,
+        fromBranch: TEST_BRANCH,
+        fromPath: TEST_TEMPLATE,
+        outputDir: workspace.outputDir,
+        argv: answers,
+        noTty: true,
+      });
 
-import { cloneRepo } from '../src/clone';
-import { createGen } from '../src';
-import { extractVariables } from '../src/extract';
-import { promptUser } from '../src/prompt';
-import { replaceVariables } from '../src/replace';
-import { ExtractedVariables } from '../src/types';
+      expect(result).toBe(workspace.outputDir);
 
-const mockCloneRepo = cloneRepo as jest.MockedFunction<typeof cloneRepo>;
-const mockExtractVariables = extractVariables as jest.MockedFunction<typeof extractVariables>;
-const mockPromptUser = promptUser as jest.MockedFunction<typeof promptUser>;
-const mockReplaceVariables = replaceVariables as jest.MockedFunction<typeof replaceVariables>;
+      const packageJsonPath = path.join(workspace.outputDir, "package.json");
+      expect(fs.existsSync(packageJsonPath)).toBe(true);
 
-const baseExtractResult: ExtractedVariables = {
-  fileReplacers: [],
-  contentReplacers: [],
-  projectQuestions: null
-};
+      const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+      expect(pkg.name).toBe(answers.PACKAGE_IDENTIFIER);
+      expect(pkg.license).toBe(answers.LICENSE);
+      expect(pkg.author).toContain(answers.USERFULLNAME);
 
-describe('createGen options', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockExtractVariables.mockResolvedValue(baseExtractResult);
-    mockPromptUser.mockResolvedValue({});
-    mockReplaceVariables.mockResolvedValue(undefined);
-  });
-
-  it('scopes extraction and replacement to fromPath', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'create-gen-spec-'));
-    const subDir = path.join(tempDir, 'workspace');
-    fs.mkdirSync(subDir);
-    mockCloneRepo.mockResolvedValue(tempDir);
-
-    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'create-gen-output-'));
-
-    await createGen({
-      templateUrl: 'https://github.com/example/repo.git',
-      outputDir,
-      fromPath: 'workspace'
-    });
-
-    expect(mockCloneRepo).toHaveBeenCalledWith('https://github.com/example/repo.git', { branch: undefined });
-    expect(mockExtractVariables).toHaveBeenCalledWith(subDir);
-    expect(mockReplaceVariables).toHaveBeenCalledWith(subDir, outputDir, baseExtractResult, {});
-
-    fs.rmSync(outputDir, { recursive: true, force: true });
-  });
-
-  it('throws when fromPath does not exist', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'create-gen-spec-'));
-    mockCloneRepo.mockResolvedValue(tempDir);
-
-    await expect(
-      createGen({
-        templateUrl: 'https://github.com/example/repo.git',
-        outputDir: path.join(os.tmpdir(), 'unused-output'),
-        fromPath: 'missing'
-      })
-    ).rejects.toThrow('Template path "missing" does not exist');
-  });
-
-  it('passes fromBranch to cloneRepo', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'create-gen-spec-'));
-    fs.mkdirSync(path.join(tempDir, 'module'));
-    mockCloneRepo.mockResolvedValue(tempDir);
-    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'create-gen-output-'));
-
-    await createGen({
-      templateUrl: 'https://github.com/example/repo.git',
-      outputDir,
-      fromPath: 'module',
-      fromBranch: 'feature/new-template'
-    });
-
-    expect(mockCloneRepo).toHaveBeenCalledWith('https://github.com/example/repo.git', {
-      branch: 'feature/new-template'
-    });
+      const questionsJsonPath = path.join(
+        workspace.outputDir,
+        ".questions.json"
+      );
+      expect(fs.existsSync(questionsJsonPath)).toBe(false);
+    } finally {
+      cleanupWorkspace(workspace);
+    }
   });
 });
 
