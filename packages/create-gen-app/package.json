@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "author": "Dan Lynch <pyramation@gmail.com>",
   "description": "Clone and customize template repositories",
+  "bin": {
+    "create-gen-app": "./cli.js",
+    "cga": "./cli.js"
+  },
   "main": "index.js",
   "module": "esm/index.js",
   "types": "index.d.ts",

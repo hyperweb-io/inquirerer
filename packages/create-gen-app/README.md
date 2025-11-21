@@ -30,20 +30,43 @@ A TypeScript library for cloning and customizing template repositories with vari
 npm install create-gen-app
 ```
 
-## Usage
+## CLI Usage
+
+Install globally (or use `npx`) and run the CLI. It defaults to cloning `launchql/pgpm-boilerplates` and listing the templates under the root directory:
+
+```bash
+npm install -g create-gen-app
+
+# Select a template interactively and generate it into ./workspace
+create-gen-app --output ./workspace
+
+# Use the short alias and skip the prompt
+cga --template module --branch main --output ./module --LICENSE MIT
+```
+
+Key flags:
+
+- `--repo`, `--branch`, `--path`: point at any git repository / branch / subdirectory
+- `--template`: pick a folder inside `--path`; omitted means the CLI will prompt (or auto-select if only one)
+- `--output`: destination directory (defaults to `./<template>`); `--force` overwrites if it already exists
+- `--no-tty`: disable interactive mode for CI
+- `--version`: show the installed CLI version and exit
+- Any additional flags are forwarded as variable overrides (e.g. `--PACKAGE_NAME my-app`)
+
+## Library Usage
 
 ### Basic Usage
 
 ```typescript
-import { createGen } from 'create-gen-app';
+import { createGen } from "create-gen-app";
 
 await createGen({
-  templateUrl: 'https://github.com/user/template-repo',
-  outputDir: './my-new-project',
+  templateUrl: "https://github.com/user/template-repo",
+  outputDir: "./my-new-project",
   argv: {
-    PROJECT_NAME: 'my-project',
-    AUTHOR: 'John Doe'
-  }
+    PROJECT_NAME: "my-project",
+    AUTHOR: "John Doe",
+  },
 });
 ```
 
@@ -52,12 +75,14 @@ await createGen({
 Variables in your template should be wrapped in `____` (four underscores) on both sides:
 
 **Filename variables:**
+
 ```
 ____PROJECT_NAME____/
   ____MODULE_NAME____.ts
 ```
 
 **Content variables:**
+
 ```typescript
 // ____MODULE_NAME____.ts
 export const projectName = "____PROJECT_NAME____";
@@ -97,12 +122,12 @@ Or use `.questions.js` for dynamic questions:
 module.exports = {
   questions: [
     {
-      name: 'PROJECT_NAME',
-      type: 'text',
-      message: 'What is your project name?',
-      required: true
-    }
-  ]
+      name: "PROJECT_NAME",
+      type: "text",
+      message: "What is your project name?",
+      required: true,
+    },
+  ],
 };
 ```
 
@@ -113,6 +138,7 @@ module.exports = {
 Main function to create a project from a template.
 
 **Options:**
+
 - `templateUrl` (string): URL or path to the template repository
 - `outputDir` (string): Destination directory for the generated project
 - `argv` (Record<string, any>): Command-line arguments to pre-populate answers
@@ -133,17 +159,19 @@ Replace variables in all files and filenames.
 ## Variable Naming Rules
 
 Variables can contain:
+
 - Letters (a-z, A-Z)
 - Numbers (0-9)
-- Underscores (_)
+- Underscores (\_)
 - Must start with a letter or underscore
 
 Examples of valid variables:
-- `__PROJECT_NAME__`
-- `__author__`
-- `__CamelCase__`
-- `__snake_case__`
-- `__VERSION_1__`
+
+- `____PROJECT_NAME____`
+- `____author____`
+- `____CamelCase____`
+- `____snake_case____`
+- `____VERSION_1____`
 
 ## License
 
