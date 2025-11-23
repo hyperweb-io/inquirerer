@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "author": "Dan Lynch <pyramation@gmail.com>",
   "description": "Clone and customize template repositories",
+  "bin": {
+    "create-gen-app": "./cli.js",
+    "cga": "./cli.js"
+  },
   "main": "index.js",
   "module": "esm/index.js",
   "types": "index.d.ts",
@@ -24,12 +28,16 @@
     "clean": "del dist/**",
     "prepare": "npm run build",
     "build": "npm run clean; tsc; tsc -p tsconfig.esm.json; npm run copy",
-    "dev": "ts-node dev/index",
+    "dev": "node -r ts-node/register dev/index.ts",
     "test": "jest",
     "test:watch": "jest --watch"
   },
   "dependencies": {
-    "inquirerer": "^2.1.0"
+    "inquirerer": "^2.1.0",
+    "minimist": "^1.2.8"
+  },
+  "devDependencies": {
+    "@types/minimist": "^1.2.5"
   },
   "keywords": []
 }

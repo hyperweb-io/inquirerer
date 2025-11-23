@@ -1,28 +1,36 @@
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { execSync } from "child_process";
 
-import { extractVariables } from '../src/extract';
-import { promptUser } from '../src/prompt';
-import { ExtractedVariables } from '../src/types';
+import { cloneRepo } from "../src/clone";
+import { extractVariables } from "../src/extract";
+import { promptUser } from "../src/prompt";
+import { ExtractedVariables } from "../src/types";
 
-jest.mock('inquirerer', () => {
+jest.mock("child_process", () => {
   return {
-    Inquirerer: jest.fn().mockImplementation(() => {
-      return {
-        prompt: jest.fn().mockResolvedValue({})
-      };
-    })
+    execSync: jest.fn(),
   };
 });
 
-describe('create-gen-app', () => {
+jest.mock("inquirerer", () => {
+  return {
+    Inquirerer: jest.fn().mockImplementation(() => {
+      return {
+        prompt: jest.fn().mockResolvedValue({}),
+      };
+    }),
+  };
+});
+
+describe("create-gen-app", () => {
   let testTempDir: string;
   let testOutputDir: string;
 
   beforeEach(() => {
-    testTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'test-template-'));
-    testOutputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'test-output-'));
+    testTempDir = fs.mkdtempSync(path.join(os.tmpdir(), "test-template-"));
+    testOutputDir = fs.mkdtempSync(path.join(os.tmpdir(), "test-output-"));
   });
 
   afterEach(() => {
@@ -34,64 +42,79 @@ describe('create-gen-app', () => {
     }
   });
 
-  describe('extractVariables', () => {
-    it('should extract variables from filenames', async () => {
-      fs.writeFileSync(path.join(testTempDir, '__PROJECT_NAME__.txt'), 'content');
-      fs.writeFileSync(path.join(testTempDir, '__AUTHOR__.md'), 'content');
+  describe("extractVariables", () => {
+    it("should extract variables from filenames", async () => {
+      fs.writeFileSync(
+        path.join(testTempDir, "____PROJECT_NAME____.txt"),
+        "content"
+      );
+      fs.writeFileSync(path.join(testTempDir, "____AUTHOR____.md"), "content");
 
       const result = await extractVariables(testTempDir);
 
       expect(result.fileReplacers).toHaveLength(2);
-      expect(result.fileReplacers.map(r => r.variable)).toContain('PROJECT_NAME');
-      expect(result.fileReplacers.map(r => r.variable)).toContain('AUTHOR');
+      expect(result.fileReplacers.map((r) => r.variable)).toContain(
+        "PROJECT_NAME"
+      );
+      expect(result.fileReplacers.map((r) => r.variable)).toContain("AUTHOR");
     });
 
-    it('should extract variables from file contents', async () => {
+    it("should extract variables from file contents", async () => {
       fs.writeFileSync(
-        path.join(testTempDir, 'test.txt'),
-        'Hello __USER_NAME__, welcome to __PROJECT_NAME__!'
+        path.join(testTempDir, "test.txt"),
+        "Hello ____USER_NAME____, welcome to ____PROJECT_NAME____!"
       );
 
       const result = await extractVariables(testTempDir);
 
       expect(result.contentReplacers.length).toBeGreaterThanOrEqual(2);
-      expect(result.contentReplacers.map(r => r.variable)).toContain('USER_NAME');
-      expect(result.contentReplacers.map(r => r.variable)).toContain('PROJECT_NAME');
+      expect(result.contentReplacers.map((r) => r.variable)).toContain(
+        "USER_NAME"
+      );
+      expect(result.contentReplacers.map((r) => r.variable)).toContain(
+        "PROJECT_NAME"
+      );
     });
 
-    it('should extract variables from nested directories', async () => {
-      const nestedDir = path.join(testTempDir, 'src', '__MODULE_NAME__');
+    it("should extract variables from nested directories", async () => {
+      const nestedDir = path.join(testTempDir, "src", "____MODULE_NAME____");
       fs.mkdirSync(nestedDir, { recursive: true });
       fs.writeFileSync(
-        path.join(nestedDir, '__FILE_NAME__.ts'),
-        'export const __CONSTANT__ = "value";'
+        path.join(nestedDir, "____FILE_NAME____.ts"),
+        'export const ____CONSTANT____ = "value";'
       );
 
       const result = await extractVariables(testTempDir);
 
-      expect(result.fileReplacers.map(r => r.variable)).toContain('MODULE_NAME');
-      expect(result.fileReplacers.map(r => r.variable)).toContain('FILE_NAME');
-      expect(result.contentReplacers.map(r => r.variable)).toContain('CONSTANT');
+      expect(result.fileReplacers.map((r) => r.variable)).toContain(
+        "MODULE_NAME"
+      );
+      expect(result.fileReplacers.map((r) => r.variable)).toContain(
+        "FILE_NAME"
+      );
+      expect(result.contentReplacers.map((r) => r.variable)).toContain(
+        "CONSTANT"
+      );
     });
 
-    it('should load questions from .questions.json', async () => {
+    it("should load questions from .questions.json", async () => {
       const questions = {
         questions: [
           {
-            name: 'projectName',
-            type: 'text',
-            message: 'What is your project name?'
+            name: "projectName",
+            type: "text",
+            message: "What is your project name?",
           },
           {
-            name: 'author',
-            type: 'text',
-            message: 'Who is the author?'
-          }
-        ]
+            name: "author",
+            type: "text",
+            message: "Who is the author?",
+          },
+        ],
       };
 
       fs.writeFileSync(
-        path.join(testTempDir, '.questions.json'),
+        path.join(testTempDir, ".questions.json"),
         JSON.stringify(questions, null, 2)
       );
 
@@ -99,10 +122,10 @@ describe('create-gen-app', () => {
 
       expect(result.projectQuestions).not.toBeNull();
       expect(result.projectQuestions?.questions).toHaveLength(2);
-      expect(result.projectQuestions?.questions[0].name).toBe('projectName');
+      expect(result.projectQuestions?.questions[0].name).toBe("projectName");
     });
 
-    it('should load questions from .questions.js', async () => {
+    it("should load questions from .questions.js", async () => {
       const questionsContent = `
 module.exports = {
   questions: [
@@ -115,17 +138,20 @@ module.exports = {
 };
 `;
 
-      fs.writeFileSync(path.join(testTempDir, '.questions.js'), questionsContent);
+      fs.writeFileSync(
+        path.join(testTempDir, ".questions.js"),
+        questionsContent
+      );
 
       const result = await extractVariables(testTempDir);
 
       expect(result.projectQuestions).not.toBeNull();
       expect(result.projectQuestions?.questions).toHaveLength(1);
-      expect(result.projectQuestions?.questions[0].name).toBe('projectName');
+      expect(result.projectQuestions?.questions[0].name).toBe("projectName");
     });
 
-    it('should handle templates with no variables', async () => {
-      fs.writeFileSync(path.join(testTempDir, 'README.md'), 'Simple readme');
+    it("should handle templates with no variables", async () => {
+      fs.writeFileSync(path.join(testTempDir, "README.md"), "Simple readme");
 
       const result = await extractVariables(testTempDir);
 
@@ -134,52 +160,60 @@ module.exports = {
       expect(result.projectQuestions).toBeNull();
     });
 
-    it('should skip .questions.json and .questions.js from variable extraction', async () => {
+    it("should skip .questions.json and .questions.js from variable extraction", async () => {
       fs.writeFileSync(
-        path.join(testTempDir, '.questions.json'),
-        '{"questions": [{"name": "__SHOULD_NOT_EXTRACT__"}]}'
+        path.join(testTempDir, ".questions.json"),
+        '{"questions": [{"name": "____SHOULD_NOT_EXTRACT____"}]}'
       );
 
       const result = await extractVariables(testTempDir);
 
-      expect(result.fileReplacers.map(r => r.variable)).not.toContain('SHOULD_NOT_EXTRACT');
+      expect(result.fileReplacers.map((r) => r.variable)).not.toContain(
+        "SHOULD_NOT_EXTRACT"
+      );
     });
 
-    it('should handle variables with different casings', async () => {
+    it("should handle variables with different casings", async () => {
       fs.writeFileSync(
-        path.join(testTempDir, 'test.txt'),
-        '__lowercase__ __UPPERCASE__ __CamelCase__ __snake_case__'
+        path.join(testTempDir, "test.txt"),
+        "____lowercase____ ____UPPERCASE____ ____CamelCase____ ____snake_case____"
       );
 
       const result = await extractVariables(testTempDir);
 
-      expect(result.contentReplacers.map(r => r.variable)).toContain('lowercase');
-      expect(result.contentReplacers.map(r => r.variable)).toContain('UPPERCASE');
-      expect(result.contentReplacers.map(r => r.variable)).toContain('CamelCase');
-      expect(result.contentReplacers.map(r => r.variable)).toContain('snake_case');
+      expect(result.contentReplacers.map((r) => r.variable)).toContain(
+        "lowercase"
+      );
+      expect(result.contentReplacers.map((r) => r.variable)).toContain(
+        "UPPERCASE"
+      );
+      expect(result.contentReplacers.map((r) => r.variable)).toContain(
+        "CamelCase"
+      );
+      expect(result.contentReplacers.map((r) => r.variable)).toContain(
+        "snake_case"
+      );
     });
   });
 
-  describe('promptUser', () => {
-    it('should generate questions for file and content replacers', async () => {
-      const { Inquirerer } = require('inquirerer');
+  describe("promptUser", () => {
+    it("should generate questions for file and content replacers", async () => {
+      const { Inquirerer } = require("inquirerer");
       const mockPrompt = jest.fn().mockResolvedValue({
-        PROJECT_NAME: 'my-project',
-        AUTHOR: 'John Doe'
+        PROJECT_NAME: "my-project",
+        AUTHOR: "John Doe",
       });
 
       Inquirerer.mockImplementation(() => ({
-        prompt: mockPrompt
+        prompt: mockPrompt,
       }));
 
       const extractedVariables: ExtractedVariables = {
         fileReplacers: [
-          { variable: 'PROJECT_NAME', pattern: /__PROJECT_NAME__/g }
+          { variable: "PROJECT_NAME", pattern: /____PROJECT_NAME____/g },
         ],
-        contentReplacers: [
-          { variable: 'AUTHOR', pattern: /__AUTHOR__/g }
-        ],
-        projectQuestions: null
+        contentReplacers: [{ variable: "AUTHOR", pattern: /____AUTHOR____/g }],
+        projectQuestions: null,
       };
 
       await promptUser(extractedVariables, {}, false);
@@ -187,34 +221,34 @@ module.exports = {
       expect(mockPrompt).toHaveBeenCalled();
       const questions = mockPrompt.mock.calls[0][1];
       expect(questions).toHaveLength(2);
-      expect(questions.map((q: any) => q.name)).toContain('PROJECT_NAME');
-      expect(questions.map((q: any) => q.name)).toContain('AUTHOR');
+      expect(questions.map((q: any) => q.name)).toContain("PROJECT_NAME");
+      expect(questions.map((q: any) => q.name)).toContain("AUTHOR");
     });
 
-    it('should prioritize project questions over auto-generated ones', async () => {
-      const { Inquirerer } = require('inquirerer');
+    it("should prioritize project questions over auto-generated ones", async () => {
+      const { Inquirerer } = require("inquirerer");
       const mockPrompt = jest.fn().mockResolvedValue({
-        projectName: 'my-project'
+        projectName: "my-project",
       });
 
       Inquirerer.mockImplementation(() => ({
-        prompt: mockPrompt
+        prompt: mockPrompt,
       }));
 
       const extractedVariables: ExtractedVariables = {
         fileReplacers: [
-          { variable: 'projectName', pattern: /__projectName__/g }
+          { variable: "projectName", pattern: /__projectName__/g },
         ],
         contentReplacers: [],
         projectQuestions: {
           questions: [
             {
-              name: 'projectName',
-              type: 'text' as const,
-              message: 'Custom question for project name'
-            }
-          ]
-        }
+              name: "projectName",
+              type: "text" as const,
+              message: "Custom question for project name",
+            },
+          ],
+        },
       };
 
       await promptUser(extractedVariables, {}, false);
@@ -222,131 +256,228 @@ module.exports = {
       expect(mockPrompt).toHaveBeenCalled();
       const questions = mockPrompt.mock.calls[0][1];
       expect(questions).toHaveLength(1);
-      expect(questions[0].message).toBe('Custom question for project name');
+      expect(questions[0].message).toBe("Custom question for project name");
     });
 
-    it('should use argv to pre-populate answers', async () => {
-      const { Inquirerer } = require('inquirerer');
+    it("should use argv to pre-populate answers", async () => {
+      const { Inquirerer } = require("inquirerer");
       const mockPrompt = jest.fn().mockResolvedValue({
-        PROJECT_NAME: 'my-project',
-        AUTHOR: 'John Doe'
+        PROJECT_NAME: "my-project",
+        AUTHOR: "John Doe",
       });
 
       Inquirerer.mockImplementation(() => ({
-        prompt: mockPrompt
+        prompt: mockPrompt,
       }));
 
       const extractedVariables: ExtractedVariables = {
         fileReplacers: [
-          { variable: 'PROJECT_NAME', pattern: /__PROJECT_NAME__/g }
+          { variable: "PROJECT_NAME", pattern: /____PROJECT_NAME____/g },
         ],
         contentReplacers: [],
-        projectQuestions: null
+        projectQuestions: null,
       };
 
-      const argv = { PROJECT_NAME: 'pre-filled-project' };
+      const argv = { PROJECT_NAME: "pre-filled-project" };
       await promptUser(extractedVariables, argv, false);
 
-      expect(mockPrompt).toHaveBeenCalledWith(
-        argv,
-        expect.any(Array)
-      );
+      expect(mockPrompt).toHaveBeenCalledWith(argv, expect.any(Array));
     });
   });
 
-  describe('variable replacement', () => {
-    it('should replace variables in file contents', async () => {
+  describe("variable replacement", () => {
+    it("should replace variables in file contents", async () => {
       fs.writeFileSync(
-        path.join(testTempDir, 'README.md'),
-        '# __PROJECT_NAME__\n\nBy __AUTHOR__'
+        path.join(testTempDir, "README.md"),
+        "# ____PROJECT_NAME____\n\nBy ____AUTHOR____"
       );
 
       const extractedVariables = await extractVariables(testTempDir);
       const answers = {
-        PROJECT_NAME: 'My Awesome Project',
-        AUTHOR: 'Jane Smith'
+        PROJECT_NAME: "My Awesome Project",
+        AUTHOR: "Jane Smith",
       };
 
-      const { replaceVariables } = require('../src/replace');
-      await replaceVariables(testTempDir, testOutputDir, extractedVariables, answers);
+      const { replaceVariables } = require("../src/replace");
+      await replaceVariables(
+        testTempDir,
+        testOutputDir,
+        extractedVariables,
+        answers
+      );
 
-      const content = fs.readFileSync(path.join(testOutputDir, 'README.md'), 'utf8');
-      expect(content).toBe('# My Awesome Project\n\nBy Jane Smith');
+      const content = fs.readFileSync(
+        path.join(testOutputDir, "README.md"),
+        "utf8"
+      );
+      expect(content).toBe("# My Awesome Project\n\nBy Jane Smith");
     });
 
-    it('should replace variables in filenames', async () => {
+    it("should replace variables in filenames", async () => {
       fs.writeFileSync(
-        path.join(testTempDir, '__PROJECT_NAME__.config.js'),
-        'module.exports = {};'
+        path.join(testTempDir, "____PROJECT_NAME____.config.js"),
+        "module.exports = {};"
       );
 
       const extractedVariables = await extractVariables(testTempDir);
       const answers = {
-        PROJECT_NAME: 'myproject'
+        PROJECT_NAME: "myproject",
       };
 
-      const { replaceVariables } = require('../src/replace');
-      await replaceVariables(testTempDir, testOutputDir, extractedVariables, answers);
+      const { replaceVariables } = require("../src/replace");
+      await replaceVariables(
+        testTempDir,
+        testOutputDir,
+        extractedVariables,
+        answers
+      );
 
-      expect(fs.existsSync(path.join(testOutputDir, 'myproject.config.js'))).toBe(true);
+      expect(
+        fs.existsSync(path.join(testOutputDir, "myproject.config.js"))
+      ).toBe(true);
     });
 
-    it('should replace variables in nested directory names', async () => {
-      const nestedDir = path.join(testTempDir, 'src', '__MODULE_NAME__');
+    it("should replace variables in nested directory names", async () => {
+      const nestedDir = path.join(testTempDir, "src", "____MODULE_NAME____");
       fs.mkdirSync(nestedDir, { recursive: true });
       fs.writeFileSync(
-        path.join(nestedDir, 'index.ts'),
-        'export const name = "__MODULE_NAME__";'
+        path.join(nestedDir, "index.ts"),
+        'export const name = "____MODULE_NAME____";'
       );
 
       const extractedVariables = await extractVariables(testTempDir);
       const answers = {
-        MODULE_NAME: 'auth'
+        MODULE_NAME: "auth",
       };
 
-      const { replaceVariables } = require('../src/replace');
-      await replaceVariables(testTempDir, testOutputDir, extractedVariables, answers);
+      const { replaceVariables } = require("../src/replace");
+      await replaceVariables(
+        testTempDir,
+        testOutputDir,
+        extractedVariables,
+        answers
+      );
 
-      const outputFile = path.join(testOutputDir, 'src', 'auth', 'index.ts');
+      const outputFile = path.join(testOutputDir, "src", "auth", "index.ts");
       expect(fs.existsSync(outputFile)).toBe(true);
-      const content = fs.readFileSync(outputFile, 'utf8');
+      const content = fs.readFileSync(outputFile, "utf8");
       expect(content).toBe('export const name = "auth";');
     });
 
-    it('should skip .questions.json and .questions.js files', async () => {
+    it("should skip .questions.json and .questions.js files", async () => {
       fs.writeFileSync(
-        path.join(testTempDir, '.questions.json'),
+        path.join(testTempDir, ".questions.json"),
         '{"questions": []}'
       );
-      fs.writeFileSync(
-        path.join(testTempDir, 'README.md'),
-        'Regular file'
-      );
+      fs.writeFileSync(path.join(testTempDir, "README.md"), "Regular file");
 
       const extractedVariables = await extractVariables(testTempDir);
-      const { replaceVariables } = require('../src/replace');
-      await replaceVariables(testTempDir, testOutputDir, extractedVariables, {});
+      const { replaceVariables } = require("../src/replace");
+      await replaceVariables(
+        testTempDir,
+        testOutputDir,
+        extractedVariables,
+        {}
+      );
 
-      expect(fs.existsSync(path.join(testOutputDir, '.questions.json'))).toBe(false);
-      expect(fs.existsSync(path.join(testOutputDir, 'README.md'))).toBe(true);
+      expect(fs.existsSync(path.join(testOutputDir, ".questions.json"))).toBe(
+        false
+      );
+      expect(fs.existsSync(path.join(testOutputDir, "README.md"))).toBe(true);
     });
 
-    it('should handle multiple occurrences of the same variable', async () => {
+    it("should handle multiple occurrences of the same variable", async () => {
       fs.writeFileSync(
-        path.join(testTempDir, 'test.txt'),
-        '__NAME__ loves __NAME__ and __NAME__ is great!'
+        path.join(testTempDir, "test.txt"),
+        "____NAME____ loves ____NAME____ and ____NAME____ is great!"
       );
 
       const extractedVariables = await extractVariables(testTempDir);
       const answers = {
-        NAME: 'Alice'
+        NAME: "Alice",
       };
 
-      const { replaceVariables } = require('../src/replace');
-      await replaceVariables(testTempDir, testOutputDir, extractedVariables, answers);
+      const { replaceVariables } = require("../src/replace");
+      await replaceVariables(
+        testTempDir,
+        testOutputDir,
+        extractedVariables,
+        answers
+      );
 
-      const content = fs.readFileSync(path.join(testOutputDir, 'test.txt'), 'utf8');
-      expect(content).toBe('Alice loves Alice and Alice is great!');
+      const content = fs.readFileSync(
+        path.join(testOutputDir, "test.txt"),
+        "utf8"
+      );
+      expect(content).toBe("Alice loves Alice and Alice is great!");
     });
+  });
+
+  describe("cloneRepo", () => {
+    const execSyncMock = execSync as jest.MockedFunction<typeof execSync>;
+
+    beforeEach(() => {
+      execSyncMock.mockReset();
+      execSyncMock.mockImplementation(() => undefined);
+    });
+
+    it("clones default branch when no branch provided", async () => {
+      const tempDir = await cloneRepo("https://github.com/example/repo.git");
+      const command = execSyncMock.mock.calls[0][0] as string;
+      expect(command).toContain(
+        "git clone https://github.com/example/repo.git"
+      );
+      expect(command.trim().endsWith(tempDir)).toBe(true);
+      expect(fs.existsSync(tempDir)).toBe(true);
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it("clones a specific branch when provided", async () => {
+      const tempDir = await cloneRepo("https://github.com/example/repo.git", {
+        branch: "dev",
+      });
+      const command = execSyncMock.mock.calls[0][0] as string;
+      expect(command).toContain(
+        "git clone --branch dev --single-branch https://github.com/example/repo.git"
+      );
+      expect(command.trim().endsWith(tempDir)).toBe(true);
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    });
+  });
+
+  it("should respect ignore patterns from questions", async () => {
+    const ignoredDir = path.join(testTempDir, "__tests__");
+    fs.mkdirSync(ignoredDir);
+    fs.writeFileSync(
+      path.join(ignoredDir, "example.txt"),
+      "This file has ____IGNORED____ variable"
+    );
+    fs.writeFileSync(
+      path.join(testTempDir, ".questions.json"),
+      JSON.stringify({
+        ignore: ["__tests__"],
+        questions: [],
+      })
+    );
+
+    const result = await extractVariables(testTempDir);
+
+    expect(result.fileReplacers.map((r) => r.variable)).not.toContain("tests");
+    expect(result.contentReplacers.map((r) => r.variable)).not.toContain(
+      "IGNORED"
+    );
+  });
+
+  it("should skip default ignored content tokens", async () => {
+    fs.writeFileSync(
+      path.join(testTempDir, "jest.config.js"),
+      "// Match both __tests__ and colocated test files"
+    );
+
+    const result = await extractVariables(testTempDir);
+
+    expect(result.contentReplacers.map((r) => r.variable)).not.toContain(
+      "tests"
+    );
   });
 });

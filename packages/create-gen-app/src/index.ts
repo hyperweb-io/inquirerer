@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 
 import { cloneRepo } from './clone';
 import { extractVariables } from './extract';
@@ -18,14 +19,31 @@ export * from './types';
  * @returns Path to the generated project
  */
 export async function createGen(options: CreateGenOptions): Promise<string> {
-  const { templateUrl, outputDir, argv = {}, noTty = false } = options;
+  const {
+    templateUrl,
+    outputDir,
+    argv = {},
+    noTty = false,
+    fromBranch,
+    fromPath
+  } = options;
   
   console.log(`Cloning template from ${templateUrl}...`);
-  const tempDir = await cloneRepo(templateUrl);
+  const tempDir = await cloneRepo(templateUrl, { branch: fromBranch });
+  const normalizedPath = fromPath ? path.normalize(fromPath) : '.';
+  const templateRoot =
+    normalizedPath && normalizedPath !== '.'
+      ? path.join(tempDir, normalizedPath)
+      : tempDir;
   
   try {
+    if (!fs.existsSync(templateRoot)) {
+      throw new Error(
+        `Template path "${fromPath}" does not exist in repository ${templateUrl}.`
+      );
+    }
     console.log('Extracting template variables...');
-    const extractedVariables = await extractVariables(tempDir);
+    const extractedVariables = await extractVariables(templateRoot);
     
     console.log(`Found ${extractedVariables.fileReplacers.length} file replacers`);
     console.log(`Found ${extractedVariables.contentReplacers.length} content replacers`);
@@ -37,7 +55,7 @@ export async function createGen(options: CreateGenOptions): Promise<string> {
     const answers = await promptUser(extractedVariables, argv, noTty);
     
     console.log(`Generating project in ${outputDir}...`);
-    await replaceVariables(tempDir, outputDir, extractedVariables, answers);
+    await replaceVariables(templateRoot, outputDir, extractedVariables, answers);
     
     console.log('Project created successfully!');
     

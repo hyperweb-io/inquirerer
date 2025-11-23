@@ -7,10 +7,11 @@ import { Question } from 'inquirerer';
  */
 export interface Questions {
   questions: Question[];
+  ignore?: string[];
 }
 
 /**
- * Variable extracted from filename patterns like __VARIABLE__
+ * Variable extracted from filename patterns like ____VARIABLE____
  */
 export interface FileReplacer {
   variable: string;
@@ -18,7 +19,7 @@ export interface FileReplacer {
 }
 
 /**
- * Variable extracted from file content patterns like __VARIABLE__
+ * Variable extracted from file content patterns like ____VARIABLE____
  */
 export interface ContentReplacer {
   variable: string;
@@ -34,6 +35,16 @@ export interface CreateGenOptions {
    */
   templateUrl: string;
   
+  /**
+   * Optional branch or tag to checkout after cloning
+   */
+  fromBranch?: string;
+
+  /**
+   * Path inside the repository to use as the template root
+   */
+  fromPath?: string;
+
   /**
    * Destination directory for the generated project
    */

@@ -4,6 +4,7 @@ import { Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 
 import { ExtractedVariables } from './types';
+import { renderLicense, isSupportedLicense } from './licenses';
 
 /**
  * Replace variables in all files in the template directory
@@ -23,6 +24,7 @@ export async function replaceVariables(
   }
   
   await walkAndReplace(templateDir, outputDir, extractedVariables, answers);
+  await ensureLicenseFile(outputDir, answers);
 }
 
 /**
@@ -77,6 +79,49 @@ async function walkAndReplace(
       await replaceInFile(sourceEntryPath, destEntryPath, extractedVariables, answers);
     }
   }
+}
+
+async function ensureLicenseFile(
+  outputDir: string,
+  answers: Record<string, any>
+): Promise<void> {
+  const licenseValue = answers?.LICENSE;
+  if (typeof licenseValue !== 'string' || licenseValue.trim() === '') {
+    return;
+  }
+
+  const selectedLicense = licenseValue.trim();
+  if (!isSupportedLicense(selectedLicense)) {
+    console.warn(
+      `[create-gen-app] License "${selectedLicense}" is not supported by the built-in templates. Leaving template LICENSE file as-is.`
+    );
+    return;
+  }
+
+  const author =
+    answers?.USERFULLNAME ??
+    answers?.AUTHOR ??
+    answers?.AUTHORFULLNAME ??
+    answers?.USERNAME ??
+    'Unknown Author';
+
+  const email = answers?.USEREMAIL ?? answers?.EMAIL ?? '';
+
+  const content = renderLicense(selectedLicense, {
+    author: String(author),
+    email: String(email || ''),
+  });
+
+  if (!content) {
+    return;
+  }
+
+  const licensePath = path.join(outputDir, 'LICENSE');
+  fs.mkdirSync(path.dirname(licensePath), { recursive: true });
+  fs.writeFileSync(licensePath, content.trimEnd() + '\n', 'utf8');
+  console.log(
+    `[create-gen-app] LICENSE updated with ${selectedLicense} template.`
+  );
 }
 
 /**
